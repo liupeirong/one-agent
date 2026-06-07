@@ -1,4 +1,4 @@
-"""Unit tests for my_package.config"""
+"""Unit tests for one_agent.config."""
 
 import sys
 from pathlib import Path
@@ -7,42 +7,92 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from my_package.config import (
+from one_agent.config import (
     Config,
+    ConfigError,
     load_config,
 )
 
+_ALL_VARS = ("OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_MODEL")
+
 
 @pytest.fixture(autouse=True)
-def isolated_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.delenv("AZURE_OPENAI_ENDPOINT", raising=False)
-    monkeypatch.delenv("AZURE_OPENAI_DEPLOYMENT", raising=False)
+def isolated_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("one_agent.config.load_dotenv", lambda: None)
+    for var in _ALL_VARS:
+        monkeypatch.delenv(var, raising=False)
+
+
+def _set_all(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-key")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    monkeypatch.setenv("OPENAI_MODEL", "gpt-4o")
 
 
 class TestLoadConfig:
     def test_loads_all_vars(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://my.openai.azure.com/")
-        monkeypatch.setenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o")
+        _set_all(monkeypatch)
 
         config = load_config()
 
-        assert config.endpoint == "https://my.openai.azure.com/"
-        assert config.deployment == "gpt-4o"
+        assert config.openai_api_key == "sk-test-key"  # pragma: allowlist secret
+        assert config.openai_base_url == "https://api.openai.com/v1"
+        assert config.openai_model == "gpt-4o"
 
     def test_strips_whitespace_from_vars(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "  https://my.openai.azure.com/  ")
-        monkeypatch.setenv("AZURE_OPENAI_DEPLOYMENT", "  gpt-4o  ")
+        monkeypatch.setenv("OPENAI_API_KEY", "  sk-test-key  ")
+        monkeypatch.setenv("OPENAI_BASE_URL", "  https://api.openai.com/v1  ")
+        monkeypatch.setenv("OPENAI_MODEL", "  gpt-4o  ")
 
         config = load_config()
 
-        assert config.endpoint == "https://my.openai.azure.com/"
-        assert config.deployment == "gpt-4o"
+        assert config.openai_api_key == "sk-test-key"  # pragma: allowlist secret
+        assert config.openai_base_url == "https://api.openai.com/v1"
+        assert config.openai_model == "gpt-4o"
+
+    @pytest.mark.parametrize("missing_var", _ALL_VARS)
+    def test_fails_on_missing_required_var(
+        self, monkeypatch: pytest.MonkeyPatch, missing_var: str
+    ) -> None:
+        _set_all(monkeypatch)
+        monkeypatch.delenv(missing_var)
+
+        with pytest.raises(ConfigError, match=missing_var):
+            load_config()
+
+    def test_fails_on_all_missing(self) -> None:
+        with pytest.raises(ConfigError, match="OPENAI_API_KEY") as exc_info:
+            load_config()
+
+        assert "OPENAI_BASE_URL" in str(exc_info.value)
+        assert "OPENAI_MODEL" in str(exc_info.value)
+
+    def test_fails_on_blank_var(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _set_all(monkeypatch)
+        monkeypatch.setenv("OPENAI_API_KEY", "   ")
+
+        with pytest.raises(ConfigError, match="OPENAI_API_KEY"):
+            load_config()
 
 
 class TestConfig:
     def test_dataclass_fields(self) -> None:
-        config = Config(endpoint="https://ep.com", deployment="dep")
+        config = Config(
+            openai_api_key="key",  # pragma: allowlist secret
+            openai_base_url="https://api.openai.com/v1",
+            openai_model="gpt-4o",
+        )
 
-        assert config.endpoint == "https://ep.com"
-        assert config.deployment == "dep"
-        assert not hasattr(config, "langsmith_api_key")
+        assert config.openai_api_key == "key"  # pragma: allowlist secret
+        assert config.openai_base_url == "https://api.openai.com/v1"
+        assert config.openai_model == "gpt-4o"
+
+    def test_frozen(self) -> None:
+        config = Config(
+            openai_api_key="key",  # pragma: allowlist secret
+            openai_base_url="https://url",
+            openai_model="model",
+        )
+
+        with pytest.raises(AttributeError):
+            config.openai_api_key = "other"  # type: ignore[misc]

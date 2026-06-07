@@ -33,6 +33,29 @@ interface session_log {
       "No unresolved documentation blockers are known."
     ],
     "next_step": "Start implementing the highest-priority unfinished feature from .ai/feature-list.md in a new session."
+  },
+  {
+    "datetime": "2026-06-07 13-51",
+    "current_feature": "openai-compatible-llm-002",
+    "what_was_done": [
+      "Renamed package from my_package to one_agent per architecture spec.",
+      "Replaced Azure OpenAI config (AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT) with OpenAI-compatible config (OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL).",
+      "Config dataclass is now frozen for immutability.",
+      "Added ConfigError exception with actionable error messages listing all missing vars.",
+      "Updated main.py to catch ConfigError, print to stderr, and exit nonzero.",
+      "Expanded test suite from 3 to 9 tests: parametrized missing var tests, blank var test, frozen test, dotenv isolation.",
+      "Fixed test isolation: monkeypatch load_dotenv to prevent .env file from leaking into tests.",
+      "PR Review agent ran; finding #1 (test isolation) addressed."
+    ],
+    "decision": [
+      "All three OPENAI vars are required — fail fast if any are missing or blank.",
+      "Config is frozen dataclass to prevent accidental mutation.",
+      "Tests patch load_dotenv to avoid .env file interference."
+    ],
+    "issues": [
+      "sys.path.insert hack remains in main.py and tests (low priority, will address when adding pyproject.toml scripts entry)."
+    ],
+    "next_step": "Implement next priority-1 feature: console-single-shot-001 or mention-parser-003."
   }
 ]
 ```
