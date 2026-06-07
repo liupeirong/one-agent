@@ -24,6 +24,7 @@
         "langchain",
         "langgraph",
         "monorepo",
+        "oneline",
         "openai",
         "polyrepo",
         "prereqs",
