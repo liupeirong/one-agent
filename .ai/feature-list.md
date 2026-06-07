@@ -23,20 +23,25 @@ interface feature_list {
 ```json
 [
   {
-    "last_updated": "2026-06-07 13-09",
+    "last_updated": "2026-06-07 16-07",
     "id": "console-single-shot-001",
     "priority": 1,
     "area": "console app",
     "title": "Single-shot console agent",
     "user_visible_behavior": "Users run one-agent with a single quoted prompt and receive one final non-streaming answer.",
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "CLI accepts a prompt argument such as `one-agent \"Explain this task\"`.",
       "The app performs one run per invocation and does not keep multi-turn conversation state.",
       "The app prints only the final answer to stdout on success.",
       "Errors are printed to stderr and return a nonzero exit code."
     ],
-    "evidence": [],
+    "evidence": [
+      "24 pytest tests pass: 6 CLI tests (valid prompt, whitespace strip, no args, multi args, blank, empty), 4 runtime tests (response return, api_key pass-through, api_key omission, model/base_url), 4 main integration tests (stdout output, CliError stderr, ConfigError stderr, unexpected error stderr), 10 config tests.",
+      "main.py accepts exactly one prompt argument, calls LLM via ChatOpenAI, prints answer to stdout.",
+      "CliError, ConfigError, and unexpected exceptions all print to stderr and exit(1).",
+      "Single-shot: one invoke() call per run, no conversation state retained."
+    ],
     "notes": "The agent may perform internal multi-step reasoning and tool calls before producing the final answer, but the user experience remains single-shot and non-streaming."
   },
   {

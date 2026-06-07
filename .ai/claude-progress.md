@@ -56,6 +56,30 @@ interface session_log {
       "sys.path.insert hack remains in main.py and tests (low priority, will address when adding pyproject.toml scripts entry)."
     ],
     "next_step": "Implement next priority-1 feature: console-single-shot-001 or mention-parser-003."
+  },
+  {
+    "datetime": "2026-06-07 16-07",
+    "current_feature": "console-single-shot-001",
+    "what_was_done": [
+      "Created src/one_agent/cli.py with parse_prompt() for single-argument CLI parsing.",
+      "Created src/one_agent/runtime.py with invoke() using ChatOpenAI for single-shot LLM calls.",
+      "Updated main.py to accept a prompt argument, call the LLM, and print only the answer to stdout.",
+      "Added langchain-openai dependency to pyproject.toml.",
+      "Added broad except Exception handler at app boundary for unexpected errors.",
+      "Created tests/test_cli.py (6 tests), tests/test_runtime.py (4 tests), tests/test_main.py (4 tests).",
+      "Updated .env.sample to use current OPENAI_* variables instead of stale AZURE_OPENAI_* ones.",
+      "Updated README.md verify instructions to include prompt argument.",
+      "PR Review agent findings addressed: UnboundLocalError fix, sys.argv test isolation, unexpected error test."
+    ],
+    "decision": [
+      "Used langchain-openai (ChatOpenAI) for LLM calls to align with future LangChain/LangGraph agent runtime.",
+      "CLI accepts exactly one positional argument (the prompt string).",
+      "Unexpected exceptions are caught at app boundary with broad except Exception, printed to stderr, exit(1)."
+    ],
+    "issues": [
+      "sys.path.insert hack remains in main.py and test files (low priority, will address when adding pyproject.toml scripts entry)."
+    ],
+    "next_step": "Implement next priority-1 feature: mention-parser-003."
   }
 ]
 ```

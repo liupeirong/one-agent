@@ -5,18 +5,23 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
-from one_agent import ConfigError, load_config
+from one_agent import CliError, ConfigError, invoke, load_config, parse_prompt
 
 
 def main() -> None:
+    """Parse a single prompt, call the LLM, and print the answer."""
     try:
+        prompt = parse_prompt()
         config = load_config()
-    except ConfigError as exc:
+        answer = invoke(config=config, prompt=prompt)
+    except (CliError, ConfigError) as exc:
         print(str(exc), file=sys.stderr)
         sys.exit(1)
-    print(
-        f"Config loaded: model={config.openai_model}, base_url={config.openai_base_url}"
-    )
+    except Exception as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+    else:
+        print(answer)
 
 
 if __name__ == "__main__":
