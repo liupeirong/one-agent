@@ -40,20 +40,24 @@ interface feature_list {
     "notes": "The agent may perform internal multi-step reasoning and tool calls before producing the final answer, but the user experience remains single-shot and non-streaming."
   },
   {
-    "last_updated": "2026-06-07 13-09",
+    "last_updated": "2026-06-07 13-51",
     "id": "openai-compatible-llm-002",
     "priority": 1,
     "area": "llm integration",
     "title": "OpenAI-compatible model configuration",
     "user_visible_behavior": "Users configure the model with OpenAI-compatible environment variables or a `.env` file.",
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "The app loads configuration from environment variables and `.env`.",
       "`OPENAI_API_KEY`, `OPENAI_BASE_URL`, and `OPENAI_MODEL` configure the chat model.",
       "The app fails fast when required model configuration is missing.",
       "No non-OpenAI-compatible provider-specific configuration is required."
     ],
-    "evidence": [],
+    "evidence": [
+      "9 pytest tests pass covering: load all vars, whitespace stripping, missing each var (parametrized), all missing, blank var, dataclass fields, frozen immutability.",
+      "main.py prints config on success (exit 0), prints error to stderr on missing config (exit 1).",
+      "Package renamed from my_package to one_agent per architecture spec."
+    ],
     "notes": "Do not spend heavy test effort on env configuration beyond basic success and missing-config behavior."
   },
   {
