@@ -14,6 +14,7 @@ from one_agent.config import (
 )
 
 _ALL_VARS = ("OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_MODEL")
+_REQUIRED_VARS = ("OPENAI_BASE_URL", "OPENAI_MODEL")
 
 
 @pytest.fixture(autouse=True)
@@ -50,7 +51,7 @@ class TestLoadConfig:
         assert config.openai_base_url == "https://api.openai.com/v1"
         assert config.openai_model == "gpt-4o"
 
-    @pytest.mark.parametrize("missing_var", _ALL_VARS)
+    @pytest.mark.parametrize("missing_var", _REQUIRED_VARS)
     def test_fails_on_missing_required_var(
         self, monkeypatch: pytest.MonkeyPatch, missing_var: str
     ) -> None:
@@ -60,18 +61,37 @@ class TestLoadConfig:
         with pytest.raises(ConfigError, match=missing_var):
             load_config()
 
-    def test_fails_on_all_missing(self) -> None:
-        with pytest.raises(ConfigError, match="OPENAI_API_KEY") as exc_info:
-            load_config()
+    def test_succeeds_without_api_key(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _set_all(monkeypatch)
+        monkeypatch.delenv("OPENAI_API_KEY")
 
-        assert "OPENAI_BASE_URL" in str(exc_info.value)
-        assert "OPENAI_MODEL" in str(exc_info.value)
+        config = load_config()
 
-    def test_fails_on_blank_var(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        assert config.openai_api_key is None
+        assert config.openai_base_url == "https://api.openai.com/v1"
+        assert config.openai_model == "gpt-4o"
+
+    def test_blank_api_key_treated_as_none(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         _set_all(monkeypatch)
         monkeypatch.setenv("OPENAI_API_KEY", "   ")
 
-        with pytest.raises(ConfigError, match="OPENAI_API_KEY"):
+        config = load_config()
+
+        assert config.openai_api_key is None
+
+    def test_fails_on_all_required_missing(self) -> None:
+        with pytest.raises(ConfigError, match="OPENAI_BASE_URL") as exc_info:
+            load_config()
+
+        assert "OPENAI_MODEL" in str(exc_info.value)
+
+    def test_fails_on_blank_required_var(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _set_all(monkeypatch)
+        monkeypatch.setenv("OPENAI_BASE_URL", "   ")
+
+        with pytest.raises(ConfigError, match="OPENAI_BASE_URL"):
             load_config()
 
 

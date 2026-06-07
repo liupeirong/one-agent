@@ -142,6 +142,8 @@ must run without LangSmith configuration.
 
 ## Security
 
+Use Entra ID instead of API key for LLM endpoint authentication.
+
 Users cannot register tools dynamically through the prompt. Tools are exposed
 only from MCP servers already configured in `~/.claude.json`, and only when the
 server is explicitly mentioned. Skills provide instructions only and do not
