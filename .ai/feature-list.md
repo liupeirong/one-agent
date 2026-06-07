@@ -54,9 +54,10 @@ interface feature_list {
       "No non-OpenAI-compatible provider-specific configuration is required."
     ],
     "evidence": [
-      "9 pytest tests pass covering: load all vars, whitespace stripping, missing each var (parametrized), all missing, blank var, dataclass fields, frozen immutability.",
+      "10 pytest tests pass covering: load all vars, whitespace stripping, missing required vars (parametrized), all required missing, blank required var, optional API key (absent → None, blank → None), dataclass fields, frozen immutability.",
       "main.py prints config on success (exit 0), prints error to stderr on missing config (exit 1).",
-      "Package renamed from my_package to one_agent per architecture spec."
+      "Package renamed from my_package to one_agent per architecture spec.",
+      "OPENAI_API_KEY is optional; when absent, Entra ID auth is assumed."
     ],
     "notes": "Do not spend heavy test effort on env configuration beyond basic success and missing-config behavior."
   },

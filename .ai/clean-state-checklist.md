@@ -15,6 +15,5 @@ Run this checklist before committing and at the end of each session.
 
 ## Repository
 
-- [ ] No unintended files in git status
 - [ ] No sensitive data (.env, credentials) staged
 - [ ] Verify no referenced files in `CLAUDE.md` or `docs/ARCHITECTURE.md` have been renamed or deleted
