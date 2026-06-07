@@ -16,8 +16,8 @@ and return one final non-streaming answer.
 
 ### Verify the repo is set correctly
 
-- copy `.env.sample` to `.env`
-- run `uv run main.py`
+- copy `.env.sample` to `.env` and fill in your values
+- run `uv run python main.py "Hello, what can you do?"`
 - run `uv run pytest`
 
 ## Planned v1 end-user usage
