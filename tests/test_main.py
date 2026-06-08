@@ -1,5 +1,6 @@
 """Integration tests for the main entry point."""
 
+import io
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -43,6 +44,9 @@ class TestMainEntryPoint:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         monkeypatch.setattr("sys.argv", ["one-agent"])
+        fake_tty = io.StringIO()
+        fake_tty.isatty = lambda: True  # type: ignore[assignment]
+        monkeypatch.setattr("sys.stdin", fake_tty)
 
         with pytest.raises(SystemExit) as exc_info:
             main()

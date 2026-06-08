@@ -45,17 +45,6 @@ class TestInvoke:
         assert kwargs["api_key"] == "sk-key"  # pragma: allowlist secret
 
     @patch("one_agent.runtime.ChatOpenAI")
-    def test_omits_api_key_when_none(self, mock_cls: MagicMock) -> None:
-        mock_cls.return_value = MagicMock(
-            invoke=MagicMock(return_value=MagicMock(content="ok"))
-        )
-
-        invoke(config=_make_config(api_key=None), prompt="hi")
-
-        _, kwargs = mock_cls.call_args
-        assert "api_key" not in kwargs
-
-    @patch("one_agent.runtime.ChatOpenAI")
     def test_passes_model_and_base_url(self, mock_cls: MagicMock) -> None:
         mock_cls.return_value = MagicMock(
             invoke=MagicMock(return_value=MagicMock(content="ok"))

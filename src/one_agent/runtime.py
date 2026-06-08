@@ -1,5 +1,6 @@
 """LLM invocation runtime for one-agent."""
 
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from langchain_openai import ChatOpenAI
 
 from one_agent.config import Config
@@ -14,6 +15,12 @@ def invoke(*, config: Config, prompt: str) -> str:
     model_kwargs: dict[str, str] = {}
     if config.openai_api_key:
         model_kwargs["api_key"] = config.openai_api_key
+    else:
+        token_provider = get_bearer_token_provider(
+            DefaultAzureCredential(),
+            "https://cognitiveservices.azure.com/.default",
+        )
+        model_kwargs["api_key"] = token_provider
 
     llm = ChatOpenAI(
         model=config.openai_model,
