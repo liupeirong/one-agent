@@ -14,12 +14,17 @@ from main import main
 
 
 @pytest.fixture(autouse=True)
-def _isolated_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Provide valid config env vars and suppress .env loading."""
+def _isolated_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Provide valid config env vars, suppress .env loading, isolate skills dir."""
     monkeypatch.setattr("one_agent.config.load_dotenv", lambda: None)
     monkeypatch.setenv("OPENAI_BASE_URL", "https://api.example.com/v1")
     monkeypatch.setenv("OPENAI_MODEL", "gpt-4o")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")  # pragma: allowlist secret
+    # Point ~/.claude/skills at an isolated temp directory so the test
+    # environment does not leak real user skills (or their absence).
+    fake_home = tmp_path / "home"
+    (fake_home / ".claude" / "skills").mkdir(parents=True)
+    monkeypatch.setattr(Path, "home", lambda: fake_home)
 
 
 class TestMainEntryPoint:
@@ -116,3 +121,35 @@ class TestMainEntryPoint:
         assert exc_info.value.code == 1
         captured = capsys.readouterr()
         assert "network unreachable" in captured.err
+
+    @patch("main.invoke", return_value="answer")
+    def test_known_skill_is_loaded_and_passed_as_system_instructions(
+        self,
+        mock_invoke: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        skill_dir = Path.home() / ".claude" / "skills" / "writer"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("Write clearly.", encoding="utf-8")
+        monkeypatch.setattr("sys.argv", ["one-agent", "@writer draft a haiku"])
+
+        main()
+
+        _, kwargs = mock_invoke.call_args
+        assert kwargs["prompt"] == "draft a haiku"
+        assert kwargs["system_instructions"] is not None
+        assert "Write clearly." in kwargs["system_instructions"]
+        assert "@writer" in kwargs["system_instructions"]
+
+    @patch("main.invoke", return_value="answer")
+    def test_no_mention_passes_no_system_instructions(
+        self,
+        mock_invoke: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr("sys.argv", ["one-agent", "plain prompt"])
+
+        main()
+
+        _, kwargs = mock_invoke.call_args
+        assert kwargs["system_instructions"] is None

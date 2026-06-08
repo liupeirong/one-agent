@@ -14,6 +14,35 @@ interface session_log {
 ```json
 [
   {
+    "datetime": "2026-06-08 09-04",
+    "current_feature": "claude-skills-004",
+    "what_was_done": [
+      "Created src/one_agent/skills.py with Skill dataclass, SkillError, default_skills_dir, discover_skills, load_skills, format_skills_context.",
+      "discover_skills returns immediate subfolders of ~/.claude/skills containing SKILL.md, sorted for determinism; returns () when the dir is missing.",
+      "load_skills validates each name against iterdir() entries (case-exact even on case-insensitive FS), reads SKILL.md as utf-8, raises SkillError on missing folder / missing file / OSError.",
+      "format_skills_context wraps each skill in BEGIN/END markers tagged with a per-call secrets.token_hex(8) token so user content cannot forge a closing boundary.",
+      "Extended runtime.invoke with optional system_instructions kwarg; when non-empty it is sent as a preceding ('system', ...) message via ChatOpenAI.",
+      "Wired main.py: discover_skills → validate_mentions(known_skills=...) → load_skills → format_skills_context → invoke(system_instructions=...).",
+      "Added case-mismatch hint to validate_mentions ('did you mean @writer?') so Windows users get a clear error.",
+      "Added tests/test_skills.py (12 tests), 2 new tests in test_main.py (skill loaded into system_instructions, no mention → None), 2 new in test_runtime.py (system message wiring, empty-string fallback), 1 new in test_mentions.py (case-mismatch hint).",
+      "Updated test_main.py fixture to monkeypatch Path.home to a tmp dir so real ~/.claude/skills doesn't leak.",
+      "All 73 pytest tests pass.",
+      "PR Review agent run; addressed both 🟡 findings (boundary forgeability and Windows case-mismatch error UX)."
+    ],
+    "decision": [
+      "Enforce case-exact skill names by checking against iterdir() entries (Windows FS is case-insensitive, so folder.is_dir() alone is insufficient).",
+      "Use per-call random token in skill boundary markers instead of a static sentinel to prevent prompt-injection escape from user-authored SKILL.md.",
+      "Send skill context as a 'system' message rather than prepended to the human prompt — keeps the user's task text clean and matches LangChain conventions.",
+      "format_skills_context returns '' (not None) for the empty case; main.py converts '' → None before passing to invoke so the runtime can branch cleanly.",
+      "MCP loader still not implemented, so main.py keeps known_mcps=() — any /mcp mention still fails fast."
+    ],
+    "issues": [
+      "MCP server loading (claude-mcp-005) still not implemented; any /mcp mention currently fails fast.",
+      "SKILL.md YAML frontmatter (if present) is sent verbatim to the model — noted as a possible follow-up but not in v1 scope.",
+      "sys.path.insert hack remains in main.py and test files (low priority)."
+    ],
+    "next_step": "Implement claude-mcp-005 (Claude-compatible MCP server loading) so /mcp mentions can resolve to real stdio servers."
+  },
     "datetime": "2026-06-08 08-31",
     "current_feature": "mention-parser-003",
     "what_was_done": [

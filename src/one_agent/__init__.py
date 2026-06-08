@@ -9,6 +9,14 @@ from one_agent.mentions import (
     validate_mentions,
 )
 from one_agent.runtime import invoke
+from one_agent.skills import (
+    Skill,
+    SkillError,
+    default_skills_dir,
+    discover_skills,
+    format_skills_context,
+    load_skills,
+)
 
 __all__ = [
     "CliError",
@@ -16,8 +24,14 @@ __all__ = [
     "ConfigError",
     "MentionError",
     "ParsedPrompt",
+    "Skill",
+    "SkillError",
+    "default_skills_dir",
+    "discover_skills",
+    "format_skills_context",
     "invoke",
     "load_config",
+    "load_skills",
     "parse_mentions",
     "parse_prompt",
     "validate_mentions",

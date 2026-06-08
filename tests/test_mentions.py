@@ -95,6 +95,11 @@ class TestValidateMentions:
         with pytest.raises(MentionError, match="@writer"):
             validate_mentions(parsed, known_skills=("editor",), known_mcps=())
 
+    def test_case_mismatch_skill_suggests_canonical_name(self) -> None:
+        parsed = ParsedPrompt(task="hi", skills=("Writer",), mcps=())
+        with pytest.raises(MentionError, match=r"did you mean @writer\?"):
+            validate_mentions(parsed, known_skills=("writer",), known_mcps=())
+
     def test_unknown_mcp_raises_with_name(self) -> None:
         parsed = ParsedPrompt(task="hi", skills=(), mcps=("tavily",))
         with pytest.raises(MentionError, match="/tavily"):
