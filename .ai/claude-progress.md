@@ -14,6 +14,35 @@ interface session_log {
 ```json
 [
   {
+    "datetime": "2026-06-08 10-21",
+    "current_feature": "claude-mcp-005",
+    "what_was_done": [
+      "Created src/one_agent/mcp_config.py with McpServer, McpConfigError, default_mcp_config_path, load_mcp_config — parses ~/.claude.json and validates each mcpServers entry (string command, list-of-string args, dict[str,str] env, transport must be 'stdio' if present).",
+      "Created src/one_agent/mcp_servers.py with McpServerError, to_stdio_connection, load_mcp_tools — sync wrapper around langchain_mcp_adapters.MultiServerMCPClient.get_tools().",
+      "Extended runtime.invoke with mcp_servers kwarg; when non-empty, lists tools and runs LangGraph create_react_agent in a single asyncio.run (single event loop for listing + agent). Tool listing bounded by a 30s timeout that raises McpServerError.",
+      "Wired main.py: load_mcp_config is now called only when parsed.mcps is non-empty → validate_mentions(known_mcps=...) → invoke(mcp_servers=...).",
+      "Added langchain-mcp-adapters and langgraph to pyproject.toml.",
+      "Exported new symbols from src/one_agent/__init__.py.",
+      "Added tests/test_mcp_config.py (15 tests), tests/test_mcp_servers.py (5 tests), 3 new in test_runtime.py (mcp_servers triggers agent, no-mcp uses plain path, startup failure raises), 4 new in test_main.py (mcp passed through, unknown /mcp fails, bad config fails when mentioned, bad config does NOT block runs without /mcp).",
+      "All 100 pytest tests pass; ruff check + format clean.",
+      "PR Review agent run; addressed findings #1 (lazy MCP config load), #2 (listing timeout), #3 (single event loop), #5 (narrowed except in load_mcp_tools)."
+    ],
+    "decision": [
+      "~/.claude.json is owned by the Claude CLI, so one-agent reads it only when the user actually mentions a /mcp server. Malformed-config runs that don't ask for MCP are not blocked.",
+      "Both tool listing and agent invocation run inside one asyncio.run. Eliminates the cross-loop assumption with langchain-mcp-adapters' per-call session model and lets future versions switch to long-lived sessions without changing one-agent.",
+      "30s timeout on get_tools() prevents a misconfigured or hung MCP server from blocking the console indefinitely (which is also the most realistic orphaned-child-process scenario).",
+      "load_mcp_tools is kept as a sync utility but is not used by main.py; runtime owns the end-to-end async path.",
+      "Narrowed the wrap-as-McpServerError except to OSError/RuntimeError/ConnectionError plus asyncio.TimeoutError so programmer bugs (TypeError, etc.) surface as themselves."
+    ],
+    "issues": [
+      "MCP child-process stderr still goes to the user's terminal — langchain-mcp-adapters does not expose per-server errlog. Documented as a known limitation; could be addressed by upstream change or subprocess wrapper.",
+      "No real-subprocess integration test for MCP yet; all tests mock MultiServerMCPClient. Worth adding later (PR Review finding #6, deferred).",
+      "Windows-specific `npx` vs `npx.cmd` resolution is a likely first user-support issue but is upstream/user-config concern.",
+      "sys.path.insert hack remains in main.py and test files (low priority)."
+    ],
+    "next_step": "Implement langchain-langgraph-agent-006 (formalize the LangChain/LangGraph runtime that the agent path already uses) or langsmith-tracing-007."
+  },
+  {
     "datetime": "2026-06-08 09-04",
     "current_feature": "claude-skills-004",
     "what_was_done": [

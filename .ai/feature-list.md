@@ -122,13 +122,13 @@ interface feature_list {
     "notes": "Skills are instructions only for v1. MCP is the only tool mechanism."
   },
   {
-    "last_updated": "2026-06-07 13-09",
+    "last_updated": "2026-06-08 10-30",
     "id": "claude-mcp-005",
     "priority": 1,
     "area": "mcp",
     "title": "Claude-compatible MCP server loading",
     "user_visible_behavior": "Users configure MCP servers in `~/.claude.json` and reference a server with `/mcp-name`.",
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "The app reads a top-level `mcpServers` object from `~/.claude.json`.",
       "`/mcp-name` maps to an MCP server name, not an individual tool name.",
@@ -138,8 +138,17 @@ interface feature_list {
       "MCP server startup or connection failure fails the run.",
       "The app does not implement reusable MCP daemon lifecycle management in v1."
     ],
-    "evidence": [],
-    "notes": "The expected config shape is compatible with Claude-style `mcpServers`, for example command, args, and env per server. Implementations should follow the MCP client library lifecycle and avoid orphaned child processes."
+    "evidence": [
+      "100 pytest tests pass (15 new in test_mcp_config.py, 5 new in test_mcp_servers.py, 3 new in test_runtime.py, 4 new in test_main.py).",
+      "src/one_agent/mcp_config.py exposes McpServer, McpConfigError, default_mcp_config_path, load_mcp_config; rejects entries lacking a string `command`, with non-string args/env values, or with a transport/type other than 'stdio'.",
+      "src/one_agent/mcp_servers.py exposes McpServerError, to_stdio_connection, load_mcp_tools; load_mcp_tools wraps MultiServerMCPClient.get_tools() and re-raises lifecycle errors (OSError/RuntimeError/ConnectionError) as McpServerError with the offending server name(s) and exception type.",
+      "runtime.invoke gained mcp_servers param; when non-empty, lists tools and runs a LangGraph create_react_agent in a single asyncio.run so adapter sessions stay alive across tool calls; tool listing is bounded by a 30s timeout that raises McpServerError on hang.",
+      "main.py wires load_mcp_config (lazy: only loaded when ≥1 /mcp mention) → validate_mentions(known_mcps=...) → invoke(mcp_servers=...).",
+      "Malformed ~/.claude.json does not break runs that don't mention an MCP server (test_malformed_mcp_config_does_not_block_runs_without_mcp_mention).",
+      "Unknown /mcp mention fails fast via validate_mentions.",
+      "PR Review agent run; addressed findings #1 (lazy MCP load), #2 (listing timeout), #3 (single event loop for listing + agent), #5 (narrowed except in load_mcp_tools)."
+    ],
+    "notes": "The expected config shape is compatible with Claude-style `mcpServers`, for example command, args, and env per server. Implementations should follow the MCP client library lifecycle and avoid orphaned child processes. Real-subprocess integration tests deferred — current tests mock MultiServerMCPClient. Stderr from MCP child processes still goes to the user's terminal (langchain-mcp-adapters does not currently expose per-server errlog)."
   },
   {
     "last_updated": "2026-06-07 13-09",
