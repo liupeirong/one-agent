@@ -2,6 +2,13 @@
 
 from one_agent.cli import CliError, parse_prompt
 from one_agent.config import Config, ConfigError, load_config
+from one_agent.mcp_config import (
+    McpConfigError,
+    McpServer,
+    default_mcp_config_path,
+    load_mcp_config,
+)
+from one_agent.mcp_servers import McpServerError, load_mcp_tools, to_stdio_connection
 from one_agent.mentions import (
     MentionError,
     ParsedPrompt,
@@ -22,17 +29,24 @@ __all__ = [
     "CliError",
     "Config",
     "ConfigError",
+    "McpConfigError",
+    "McpServer",
+    "McpServerError",
     "MentionError",
     "ParsedPrompt",
     "Skill",
     "SkillError",
+    "default_mcp_config_path",
     "default_skills_dir",
     "discover_skills",
     "format_skills_context",
     "invoke",
     "load_config",
+    "load_mcp_config",
+    "load_mcp_tools",
     "load_skills",
     "parse_mentions",
     "parse_prompt",
+    "to_stdio_connection",
     "validate_mentions",
 ]

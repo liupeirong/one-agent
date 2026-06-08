@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from one_agent.config import Config
@@ -88,3 +90,89 @@ class TestInvoke:
         invoke(config=_make_config(), prompt="hi", system_instructions="")
 
         mock_llm.invoke.assert_called_once_with("hi")
+
+    @patch("one_agent.runtime.create_react_agent")
+    @patch("one_agent.runtime.MultiServerMCPClient")
+    @patch("one_agent.runtime.ChatOpenAI")
+    def test_mcp_servers_trigger_react_agent_and_return_final_message(
+        self,
+        mock_cls: MagicMock,
+        mock_client_cls: MagicMock,
+        mock_create_agent: MagicMock,
+    ) -> None:
+        from one_agent.mcp_config import McpServer
+
+        mock_cls.return_value = MagicMock()
+        tool = MagicMock(name="tool")
+        client = MagicMock()
+
+        async def _get_tools() -> list[object]:
+            return [tool]
+
+        client.get_tools = _get_tools
+        mock_client_cls.return_value = client
+
+        agent = MagicMock()
+
+        async def _ainvoke(state: dict) -> dict:
+            return {"messages": [MagicMock(content="agent answer")]}
+
+        agent.ainvoke = _ainvoke
+        mock_create_agent.return_value = agent
+
+        result = invoke(
+            config=_make_config(),
+            prompt="search the web",
+            system_instructions="use tools wisely",
+            mcp_servers=[McpServer(name="tavily", command="npx")],
+        )
+
+        assert result == "agent answer"
+        connections = mock_client_cls.call_args.args[0]
+        assert list(connections.keys()) == ["tavily"]
+        args, kwargs = mock_create_agent.call_args
+        assert args[1] == [tool]
+        assert kwargs["prompt"] == "use tools wisely"
+
+    @patch("one_agent.runtime.create_react_agent")
+    @patch("one_agent.runtime.MultiServerMCPClient")
+    @patch("one_agent.runtime.ChatOpenAI")
+    def test_no_mcp_servers_does_not_invoke_agent(
+        self,
+        mock_cls: MagicMock,
+        mock_client_cls: MagicMock,
+        mock_create_agent: MagicMock,
+    ) -> None:
+        mock_llm = MagicMock()
+        mock_llm.invoke.return_value = MagicMock(content="plain")
+        mock_cls.return_value = mock_llm
+
+        result = invoke(config=_make_config(), prompt="hi", mcp_servers=[])
+
+        assert result == "plain"
+        mock_create_agent.assert_not_called()
+        mock_client_cls.assert_not_called()
+
+    @patch("one_agent.runtime.MultiServerMCPClient")
+    @patch("one_agent.runtime.ChatOpenAI")
+    def test_mcp_startup_failure_raises_mcp_server_error(
+        self, mock_cls: MagicMock, mock_client_cls: MagicMock
+    ) -> None:
+        from one_agent.mcp_config import McpServer
+        from one_agent.mcp_servers import McpServerError
+
+        mock_cls.return_value = MagicMock()
+        client = MagicMock()
+
+        async def _boom() -> list[object]:
+            raise RuntimeError("npx not found")
+
+        client.get_tools = _boom
+        mock_client_cls.return_value = client
+
+        with pytest.raises(McpServerError, match=r"/tavily.*RuntimeError.*npx not found"):
+            invoke(
+                config=_make_config(),
+                prompt="hi",
+                mcp_servers=[McpServer(name="tavily", command="npx")],
+            )

@@ -20,8 +20,8 @@ def _isolated_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("OPENAI_BASE_URL", "https://api.example.com/v1")
     monkeypatch.setenv("OPENAI_MODEL", "gpt-4o")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")  # pragma: allowlist secret
-    # Point ~/.claude/skills at an isolated temp directory so the test
-    # environment does not leak real user skills (or their absence).
+    # Point ~/.claude/skills and ~/.claude.json at an isolated temp directory
+    # so the test environment does not leak real user skills or MCP servers.
     fake_home = tmp_path / "home"
     (fake_home / ".claude" / "skills").mkdir(parents=True)
     monkeypatch.setattr(Path, "home", lambda: fake_home)
@@ -153,3 +153,70 @@ class TestMainEntryPoint:
 
         _, kwargs = mock_invoke.call_args
         assert kwargs["system_instructions"] is None
+        assert kwargs["mcp_servers"] is None
+
+    @patch("main.invoke", return_value="agent answer")
+    def test_known_mcp_passes_selected_server(
+        self,
+        mock_invoke: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import json
+
+        (Path.home() / ".claude.json").write_text(
+            json.dumps(
+                {"mcpServers": {"tavily": {"command": "npx", "args": ["-y", "x"]}}}
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr("sys.argv", ["one-agent", "search /tavily for python"])
+
+        main()
+
+        _, kwargs = mock_invoke.call_args
+        servers = kwargs["mcp_servers"]
+        assert servers is not None
+        assert [s.name for s in servers] == ["tavily"]
+        assert kwargs["prompt"] == "search for python"
+
+    def test_unknown_mcp_mention_prints_to_stderr(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        monkeypatch.setattr("sys.argv", ["one-agent", "use /tavily please"])
+
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert "/tavily" in captured.err
+
+    def test_invalid_mcp_config_prints_to_stderr_when_mentioned(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        (Path.home() / ".claude.json").write_text("{not json", encoding="utf-8")
+        monkeypatch.setattr("sys.argv", ["one-agent", "use /tavily please"])
+
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert "Invalid JSON" in captured.err
+
+    @patch("main.invoke", return_value="ok")
+    def test_malformed_mcp_config_does_not_block_runs_without_mcp_mention(
+        self,
+        _mock_invoke: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        (Path.home() / ".claude.json").write_text("{not json", encoding="utf-8")
+        monkeypatch.setattr("sys.argv", ["one-agent", "plain prompt"])
+
+        # Should not raise: ~/.claude.json belongs to the Claude CLI and is
+        # only loaded when the user explicitly asks for an MCP server.
+        main()
