@@ -170,7 +170,9 @@ class TestInvoke:
         client.get_tools = _boom
         mock_client_cls.return_value = client
 
-        with pytest.raises(McpServerError, match=r"/tavily.*RuntimeError.*npx not found"):
+        with pytest.raises(
+            McpServerError, match=r"/tavily.*RuntimeError.*npx not found"
+        ):
             invoke(
                 config=_make_config(),
                 prompt="hi",
