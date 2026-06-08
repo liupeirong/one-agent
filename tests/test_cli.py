@@ -62,3 +62,48 @@ class TestParsePromptFromStdin:
     def test_arg_takes_precedence_over_stdin(self) -> None:
         result = parse_prompt(["from arg"], stdin=io.StringIO("from stdin"))
         assert result == "from arg"
+
+
+class TestParsePromptFromFile:
+    def test_reads_prompt_from_file(self, tmp_path: Path) -> None:
+        f = tmp_path / "prompt.txt"
+        f.write_text("hello from file", encoding="utf-8")
+
+        result = parse_prompt(["--file", str(f)])
+        assert result == "hello from file"
+
+    def test_reads_multiline_file(self, tmp_path: Path) -> None:
+        f = tmp_path / "prompt.txt"
+        f.write_text("line one\nline two\nline three", encoding="utf-8")
+
+        result = parse_prompt(["--file", str(f)])
+        assert result == "line one\nline two\nline three"
+
+    def test_strips_whitespace_from_file(self, tmp_path: Path) -> None:
+        f = tmp_path / "prompt.txt"
+        f.write_text("  hello  \n\n", encoding="utf-8")
+
+        result = parse_prompt(["--file", str(f)])
+        assert result == "hello"
+
+    def test_fails_on_blank_file(self, tmp_path: Path) -> None:
+        f = tmp_path / "prompt.txt"
+        f.write_text("   \n  ", encoding="utf-8")
+
+        with pytest.raises(CliError, match="blank"):
+            parse_prompt(["--file", str(f)])
+
+    def test_fails_on_missing_file(self) -> None:
+        with pytest.raises(CliError, match="not found"):
+            parse_prompt(["--file", "nonexistent.txt"])
+
+    def test_fails_when_file_path_missing(self) -> None:
+        with pytest.raises(CliError, match="requires a file path"):
+            parse_prompt(["--file"])
+
+    def test_fails_when_combined_with_positional(self, tmp_path: Path) -> None:
+        f = tmp_path / "prompt.txt"
+        f.write_text("hello", encoding="utf-8")
+
+        with pytest.raises(CliError, match="cannot be combined"):
+            parse_prompt(["some prompt", "--file", str(f)])
