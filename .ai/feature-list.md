@@ -67,13 +67,13 @@ interface feature_list {
     "notes": "Do not spend heavy test effort on env configuration beyond basic success and missing-config behavior."
   },
   {
-    "last_updated": "2026-06-07 13-09",
+    "last_updated": "2026-06-08 08-35",
     "id": "mention-parser-003",
     "priority": 1,
     "area": "prompt routing",
     "title": "Explicit skill and MCP mention parsing",
     "user_visible_behavior": "Users opt into skills with `@skill-name` and MCP servers with `/mcp-name` anywhere in the prompt.",
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "Mentions are recognized anywhere in the prompt.",
       "Skill and MCP names may contain letters, numbers, `_`, and `-`.",
@@ -83,8 +83,14 @@ interface feature_list {
       "The app fails fast if the remaining task is empty after stripping mentions.",
       "Unknown skill or MCP mentions fail fast with a clear error."
     ],
-    "evidence": [],
-    "notes": "Only explicitly mentioned skills and MCP servers are loaded. If no mentions are present, no skills or MCP tools are loaded."
+    "evidence": [
+      "54 pytest tests pass (17 new in test_mentions.py + 2 new in test_main.py).",
+      "src/one_agent/mentions.py exposes parse_mentions, validate_mentions, ParsedPrompt, MentionError.",
+      "Regex uses leading whitespace/start-of-string boundary so user@example.com and /etc/hosts do not match.",
+      "main.py calls parse_mentions then validate_mentions(known_skills=(), known_mcps=()); since loaders are not yet implemented, any mention currently fails fast with a MentionError listing the offending @name or /name.",
+      "Empty task after stripping raises MentionError with 'no task text remains' guidance; stripped task is what gets sent to invoke()."
+    ],
+    "notes": "Validation uses caller-supplied known-name sets so the skills (004) and MCP (005) features can wire in real loader output without changing this module."
   },
   {
     "last_updated": "2026-06-07 13-09",
