@@ -73,6 +73,34 @@ class TestMainEntryPoint:
         captured = capsys.readouterr()
         assert "OPENAI_BASE_URL" in captured.err
 
+    def test_unknown_mention_prints_to_stderr(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        monkeypatch.setattr("sys.argv", ["one-agent", "@writer help"])
+
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert "@writer" in captured.err
+
+    def test_empty_task_after_mentions_prints_to_stderr(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        monkeypatch.setattr("sys.argv", ["one-agent", "@writer"])
+
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert "no task text" in captured.err
+
     @patch("main.invoke", side_effect=ConnectionError("network unreachable"))
     def test_unexpected_error_prints_to_stderr(
         self,

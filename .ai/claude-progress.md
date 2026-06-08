@@ -14,6 +14,30 @@ interface session_log {
 ```json
 [
   {
+    "datetime": "2026-06-08 08-31",
+    "current_feature": "mention-parser-003",
+    "what_was_done": [
+      "Created src/one_agent/mentions.py with parse_mentions, validate_mentions, ParsedPrompt, MentionError.",
+      "Regex uses negative lookbehind/lookahead on [\\w@] / [\\w/] so user@example.com and /etc/hosts are skipped while quoted/bracketed mentions still match.",
+      "Whitespace is collapsed and orphaned punctuation glued back after stripping mentions.",
+      "Exposed the new symbols from src/one_agent/__init__.py.",
+      "Wired main.py to parse_mentions then validate_mentions (with empty known sets) before load_config/invoke so routing errors fail fast.",
+      "Added tests/test_mentions.py with 18 cases covering all verification items, plus 2 main.py tests for unknown-mention and empty-task-after-mentions paths.",
+      "All 55 pytest tests pass.",
+      "PR Review agent run; addressed findings #1 (quoted/bracketed mentions) and #3 (dangling punctuation)."
+    ],
+    "decision": [
+      "validate_mentions takes caller-supplied known_skills/known_mcps sets so the upcoming skill (004) and MCP (005) loaders can wire in real names without changing this module.",
+      "Until loaders ship, main.py passes empty known sets, which is the correct behaviour: any explicit mention is currently 'unknown' and fails fast with a clear message.",
+      "Empty-task validation is checked before unknown-mention validation; users get the most fundamental error first."
+    ],
+    "issues": [
+      "Skills (004) and MCP (005) loaders not yet implemented, so any prompt with mentions fails until those land. This is expected and documented.",
+      "sys.path.insert hack remains in main.py and tests (unchanged, low priority)."
+    ],
+    "next_step": "Implement claude-skills-004 (Claude-style SKILL.md loading) so mention parsing can resolve to real skill instructions."
+  },
+  {
     "datetime": "2026-06-07 13-09",
     "current_feature": "feature planning documentation",
     "what_was_done": [
