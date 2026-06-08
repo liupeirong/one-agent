@@ -93,13 +93,13 @@ interface feature_list {
     "notes": "Validation uses caller-supplied known-name sets so the skills (004) and MCP (005) features can wire in real loader output without changing this module."
   },
   {
-    "last_updated": "2026-06-07 13-09",
+    "last_updated": "2026-06-08 09-10",
     "id": "claude-skills-004",
     "priority": 1,
     "area": "skills",
     "title": "Claude-style skill loading",
     "user_visible_behavior": "Users place skills under `~/.claude/skills/<skill-name>/SKILL.md` and reference them with `@skill-name`.",
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "Skill names match folder names exactly.",
       "The app loads `SKILL.md` from each explicitly mentioned skill folder.",
@@ -107,7 +107,18 @@ interface feature_list {
       "Missing folders or missing `SKILL.md` files fail fast.",
       "Sibling files or executable scripts in skill folders are not loaded or registered as tools in v1."
     ],
-    "evidence": [],
+    "evidence": [
+      "73 pytest tests pass (12 new in test_skills.py, 2 new in test_main.py, 2 new in test_runtime.py, 1 new in test_mentions.py).",
+      "src/one_agent/skills.py exposes Skill, SkillError, default_skills_dir, discover_skills, load_skills, format_skills_context.",
+      "discover_skills lists immediate subfolders of ~/.claude/skills containing SKILL.md; load_skills enforces exact-case match against iterdir() entries so case-insensitive filesystems (Windows) still reject @Writer vs writer.",
+      "Missing folder and missing SKILL.md each raise SkillError with the offending @name and expected path.",
+      "Only SKILL.md is read; sibling files and scripts are ignored (test_sibling_files_are_not_loaded).",
+      "format_skills_context wraps each skill in BEGIN/END markers tagged with a per-call random token so user content cannot forge a closing boundary.",
+      "main.py wires discover_skills → validate_mentions(known_skills=...) → load_skills → format_skills_context → invoke(system_instructions=...).",
+      "runtime.invoke gained optional system_instructions param; sends as preceding system message when non-empty.",
+      "validate_mentions now suggests the canonical skill name on case-mismatch (Windows-friendly error).",
+      "PR Review agent run; addressed boundary-forgeability and case-mismatch hint findings."
+    ],
     "notes": "Skills are instructions only for v1. MCP is the only tool mechanism."
   },
   {

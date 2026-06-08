@@ -80,8 +80,16 @@ def validate_mentions(
 
     unknown_skills = [s for s in parsed.skills if s not in skill_set]
     if unknown_skills:
+        lowered = {s.lower(): s for s in skill_set}
+        parts: list[str] = []
+        for name in unknown_skills:
+            canonical = lowered.get(name.lower())
+            if canonical and canonical != name:
+                parts.append(f"@{name} (did you mean @{canonical}?)")
+            else:
+                parts.append(f"@{name}")
         raise MentionError(
-            f"Unknown skill mention(s): {', '.join('@' + s for s in unknown_skills)}. "
+            f"Unknown skill mention(s): {', '.join(parts)}. "
             "Ensure a matching folder exists under ~/.claude/skills/."
         )
 

@@ -58,3 +58,33 @@ class TestInvoke:
         _, kwargs = mock_cls.call_args
         assert kwargs["model"] == "gpt-4o-mini"
         assert kwargs["base_url"] == "https://custom.api/v1"
+
+    @patch("one_agent.runtime.ChatOpenAI")
+    def test_system_instructions_sent_as_system_message(
+        self, mock_cls: MagicMock
+    ) -> None:
+        mock_llm = MagicMock()
+        mock_llm.invoke.return_value = MagicMock(content="ok")
+        mock_cls.return_value = mock_llm
+
+        invoke(
+            config=_make_config(),
+            prompt="hi",
+            system_instructions="Follow the writer skill.",
+        )
+
+        mock_llm.invoke.assert_called_once_with(
+            [("system", "Follow the writer skill."), ("human", "hi")]
+        )
+
+    @patch("one_agent.runtime.ChatOpenAI")
+    def test_empty_system_instructions_falls_back_to_plain_prompt(
+        self, mock_cls: MagicMock
+    ) -> None:
+        mock_llm = MagicMock()
+        mock_llm.invoke.return_value = MagicMock(content="ok")
+        mock_cls.return_value = mock_llm
+
+        invoke(config=_make_config(), prompt="hi", system_instructions="")
+
+        mock_llm.invoke.assert_called_once_with("hi")
