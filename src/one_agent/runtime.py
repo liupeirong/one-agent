@@ -76,17 +76,21 @@ async def _arun_agent(
         return _extract_final_message(state)
 
     connections = {server.name: to_stdio_connection(server) for server in servers}
-    async with MultiServerMCPClient(connections) as client:
-        tools: list[BaseTool] = await asyncio.wait_for(
-            client.get_tools(),
-            timeout=_MCP_TOOL_LISTING_TIMEOUT_SECONDS,
-        )
-        state = await _ainvoke_agent(
-            llm=llm,
-            tools=tools,
-            prompt=prompt,
-            system_instructions=system_instructions,
-        )
+    # NOTE: As of langchain-mcp-adapters 0.1.0+, MultiServerMCPClient is NOT an
+    # async context manager. Each get_tools() call opens and closes a per-server
+    # stdio session internally, so we instantiate the client directly. Wrapping
+    # this in `async with` will raise at runtime.
+    client = MultiServerMCPClient(connections)
+    tools: list[BaseTool] = await asyncio.wait_for(
+        client.get_tools(),
+        timeout=_MCP_TOOL_LISTING_TIMEOUT_SECONDS,
+    )
+    state = await _ainvoke_agent(
+        llm=llm,
+        tools=tools,
+        prompt=prompt,
+        system_instructions=system_instructions,
+    )
     return _extract_final_message(state)
 
 
