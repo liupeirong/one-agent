@@ -4,20 +4,21 @@ import asyncio
 from typing import Sequence
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+from langchain.agents import create_agent
 from langchain_core.tools import BaseTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_openai import ChatOpenAI
-from langgraph.prebuilt import create_react_agent
 
 from one_agent.config import Config
 from one_agent.mcp_config import McpServer
-from one_agent.mcp_servers import McpServerError, to_stdio_connection
+from one_agent.mcp_servers import to_stdio_connection
 
 # Maximum time we will wait for selected MCP servers to start and list their
 # tools before failing the run. Keeps a misconfigured or hung server from
 # blocking the console indefinitely (and from being orphaned if the user
 # escapes with a hard kill).
 _MCP_TOOL_LISTING_TIMEOUT_SECONDS = 30.0
+_MCP_AGENT_EXECUTION_TIMEOUT_SECONDS = 120.0
 
 
 def invoke(
@@ -82,28 +83,20 @@ async def _arun_with_mcp(
 ) -> str:
     """List MCP tools and run the ReAct agent inside a single event loop."""
     connections = {server.name: to_stdio_connection(server) for server in servers}
-    client = MultiServerMCPClient(connections)
-    server_label = ", ".join(f"/{server.name}" for server in servers)
-
-    try:
+    async with MultiServerMCPClient(connections) as client:
         tools: list[BaseTool] = await asyncio.wait_for(
             client.get_tools(),
             timeout=_MCP_TOOL_LISTING_TIMEOUT_SECONDS,
         )
-    except asyncio.TimeoutError as exc:
-        raise McpServerError(
-            f"Timed out after {_MCP_TOOL_LISTING_TIMEOUT_SECONDS:.0f}s while "
-            f"starting MCP server(s) {server_label} or listing their tools."
-        ) from exc
-    except (OSError, RuntimeError, ConnectionError) as exc:
-        raise McpServerError(
-            f"Failed to load tools from MCP server(s) {server_label} "
-            f"({type(exc).__name__}): {exc}."
-        ) from exc
+        agent = create_agent(
+            llm, list(tools), system_prompt=system_instructions or None
+        )
+        state = await asyncio.wait_for(
+            agent.ainvoke({"messages": [("user", prompt)]}),
+            timeout=_MCP_AGENT_EXECUTION_TIMEOUT_SECONDS,
+        )
+        messages = state.get("messages", []) if isinstance(state, dict) else []
 
-    agent = create_react_agent(llm, list(tools), prompt=system_instructions or None)
-    state = await agent.ainvoke({"messages": [("user", prompt)]})
-    messages = state.get("messages", []) if isinstance(state, dict) else []
     if not messages:
         return ""
     final = messages[-1]
