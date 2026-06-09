@@ -23,6 +23,15 @@ from one_agent import (
     validate_mentions,
 )
 
+# Force UTF-8 on stdout/stderr so non-ASCII content from MCP tools (web
+# search results, emoji, accented characters, etc.) doesn't crash on
+# legacy Windows consoles whose default code page is cp1252/cp437.
+# `errors="replace"` keeps the run from failing on rare unencodable chars.
+for _stream in (sys.stdout, sys.stderr):
+    reconfigure = getattr(_stream, "reconfigure", None)
+    if reconfigure is not None:
+        reconfigure(encoding="utf-8", errors="replace")
+
 
 def main() -> None:
     """Parse a single prompt, call the LLM, and print the answer."""
