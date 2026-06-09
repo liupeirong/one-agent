@@ -33,7 +33,8 @@ and output instructions.
 Before reviewing:
 
 1. **Skip draft PRs** — if the PR is a draft, post a single comment: "⏸️ Skipping review — PR is in draft state. Will review when marked ready." Then stop.
-2. **Ignore generated files** — skip `*.lock.yml`, `uv.lock`, and any files under `node_modules/` or `dist/`.
+2. **Skip minor commits** — read the title and body of the latest commit on the PR. If the commit message contains `[skip review]` or `[minor]`, post a single comment: "⏭️ Skipping review — commit marked as minor." Then stop.
+3. **Ignore generated files** — skip `*.lock.yml`, `uv.lock`, and any files under `node_modules/` or `dist/`.
 3. **Check existing review comments** — read existing review threads to avoid duplicating previously raised findings.
 
 ## Output Instructions
