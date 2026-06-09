@@ -1,6 +1,7 @@
 """Integration tests for the main entry point."""
 
 import io
+import os
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -20,6 +21,14 @@ def _isolated_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("OPENAI_BASE_URL", "https://api.example.com/v1")
     monkeypatch.setenv("OPENAI_MODEL", "gpt-4o")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")  # pragma: allowlist secret
+    # Ensure LangSmith tracing stays off unless a test opts in.
+    for var in (
+        "LANGSMITH_API_KEY",
+        "LANGCHAIN_API_KEY",
+        "LANGSMITH_TRACING",
+        "LANGCHAIN_TRACING_V2",
+    ):
+        monkeypatch.delenv(var, raising=False)
     # Point ~/.claude/skills and ~/.claude.json at an isolated temp directory
     # so the test environment does not leak real user skills or MCP servers.
     fake_home = tmp_path / "home"
@@ -154,6 +163,37 @@ class TestMainEntryPoint:
         _, kwargs = mock_invoke.call_args
         assert kwargs["system_instructions"] is None
         assert kwargs["mcp_servers"] is None
+
+    @patch("main.invoke", return_value="answer")
+    def test_run_succeeds_without_langsmith_config(
+        self,
+        _mock_invoke: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr("sys.argv", ["one-agent", "plain prompt"])
+
+        main()
+
+        # No API key was set, so tracing must stay off.
+        assert "LANGSMITH_TRACING" not in os.environ
+        assert "LANGCHAIN_TRACING_V2" not in os.environ
+
+    @patch("main.invoke", return_value="answer")
+    def test_langsmith_api_key_enables_tracing(
+        self,
+        _mock_invoke: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv(
+            "LANGSMITH_API_KEY",
+            "ls-test",  # pragma: allowlist secret
+        )
+        monkeypatch.setattr("sys.argv", ["one-agent", "plain prompt"])
+
+        main()
+
+        assert os.environ["LANGSMITH_TRACING"] == "true"
+        assert os.environ["LANGCHAIN_TRACING_V2"] == "true"
 
     @patch("main.invoke", return_value="agent answer")
     def test_known_mcp_passes_selected_server(

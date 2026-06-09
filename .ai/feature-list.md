@@ -171,19 +171,27 @@ interface feature_list {
     "notes": "Single-shot at the CLI boundary. LangSmith tracing is owned by feature 007."
   },
   {
-    "last_updated": "2026-06-07 13-09",
+    "last_updated": "2026-06-09 12-42",
     "id": "langsmith-tracing-007",
     "priority": 3,
     "area": "observability",
     "title": "Optional LangSmith tracing",
     "user_visible_behavior": "Tracing is enabled automatically when LangSmith credentials are configured and otherwise stays off.",
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "Tracing is enabled when a LangSmith API key is present.",
       "Tracing is disabled when no LangSmith API key is present.",
       "The app runs successfully without LangSmith configuration."
     ],
-    "evidence": [],
+    "evidence": [
+      "116 pytest tests pass (10 new in test_tracing.py, 2 new in test_main.py); ruff check + format clean.",
+      "src/one_agent/tracing.py exposes TracingConfig and configure_tracing; reads LANGSMITH_API_KEY (legacy LANGCHAIN_API_KEY honored) and the LANGSMITH_TRACING / legacy LANGCHAIN_TRACING_V2 on/off override.",
+      "When a key is present and tracing isn't explicitly disabled, both LANGSMITH_TRACING and LANGCHAIN_TRACING_V2 are set to 'true' so the LangChain SDK exports traces automatically (langsmith 0.8.9 is already a transitive dep of langchain).",
+      "When no key is present (or override is false), both flags are normalized to 'false' so a stale LANGSMITH_TRACING=true left in the shell does not cause unauthenticated exports.",
+      "main.py calls configure_tracing() after load_config() so .env values are visible; integration test test_run_succeeds_without_langsmith_config asserts the app works without any LangSmith vars.",
+      ".env.sample and README.md document the optional LangSmith vars and the LANGSMITH_TRACING=false kill switch.",
+      "PR Review agent run; addressed findings #1 (legacy LANGCHAIN_TRACING_V2 disable honored), #2 (stale-flag normalization), #3 (dropped speculative project/endpoint fields), #4 (added coverage for legacy-disable and stale-true paths)."
+    ],
     "notes": "Use the conventional LangSmith environment variables supported by the LangChain/LangSmith SDKs."
   }
 ]

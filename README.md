@@ -21,6 +21,11 @@ OPENAI_BASE_URL=...
 OPENAI_MODEL=...
 ```
 
+Optional LangSmith tracing: set `LANGSMITH_API_KEY` (and optionally
+`LANGSMITH_PROJECT` / `LANGSMITH_ENDPOINT`) to send agent traces to
+LangSmith. Leave it unset to keep tracing off; set
+`LANGSMITH_TRACING=false` to force it off even when a key is present.
+
 3. Add optional skills in Claude-style folders:
 
 ```txt

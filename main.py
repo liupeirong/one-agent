@@ -12,6 +12,7 @@ from one_agent import (
     McpServerError,
     MentionError,
     SkillError,
+    configure_tracing,
     discover_skills,
     format_skills_context,
     invoke,
@@ -52,6 +53,7 @@ def main() -> None:
         skills_context = format_skills_context(skills)
         selected_servers = tuple(mcp_servers[name] for name in parsed.mcps)
         config = load_config()
+        configure_tracing()
         answer = invoke(
             config=config,
             prompt=parsed.task,

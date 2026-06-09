@@ -24,6 +24,7 @@ from one_agent.skills import (
     format_skills_context,
     load_skills,
 )
+from one_agent.tracing import TracingConfig, configure_tracing
 
 __all__ = [
     "CliError",
@@ -36,6 +37,8 @@ __all__ = [
     "ParsedPrompt",
     "Skill",
     "SkillError",
+    "TracingConfig",
+    "configure_tracing",
     "default_mcp_config_path",
     "default_skills_dir",
     "discover_skills",
