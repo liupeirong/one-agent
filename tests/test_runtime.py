@@ -2,7 +2,7 @@
 
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -13,14 +13,6 @@ from one_agent.mcp_config import McpServer
 from one_agent.runtime import invoke
 
 
-def _make_async_client_ctx(client: MagicMock) -> MagicMock:
-    """Wrap *client* so it acts as an ``async with`` context manager."""
-    ctx = MagicMock()
-    ctx.__aenter__ = AsyncMock(return_value=client)
-    ctx.__aexit__ = AsyncMock(return_value=None)
-    return ctx
-
-
 def _make_config(
     *,
     api_key: str | None = "sk-test",  # pragma: allowlist secret
@@ -28,6 +20,22 @@ def _make_config(
     model: str = "gpt-4o",
 ) -> Config:
     return Config(openai_api_key=api_key, openai_base_url=base_url, openai_model=model)
+
+
+def _make_mcp_client(*, tools: list[object]) -> MagicMock:
+    """Build a MultiServerMCPClient mock whose get_tools() is awaitable.
+
+    NOTE: Mirrors the real langchain-mcp-adapters 0.1.0+ API where the client
+    is used directly (not as an async context manager). Do not wrap this mock
+    in __aenter__/__aexit__.
+    """
+    client = MagicMock()
+
+    async def _get_tools() -> list[object]:
+        return tools
+
+    client.get_tools = _get_tools
+    return client
 
 
 def _make_agent(*, messages: list[object]) -> MagicMock:
@@ -159,21 +167,10 @@ class TestInvoke:
     ) -> None:
         mock_cls.return_value = MagicMock()
         tool = MagicMock(name="tool")
-        client = MagicMock()
-
-        async def _get_tools() -> list[object]:
-            return [tool]
-
-        client.get_tools = _get_tools
-        mock_client_cls.return_value = _make_async_client_ctx(client)
-
-        agent = MagicMock()
-
-        async def _ainvoke(state: dict) -> dict:
-            return {"messages": [MagicMock(content="agent answer")]}
-
-        agent.ainvoke = _ainvoke
-        mock_create_agent.return_value = agent
+        mock_client_cls.return_value = _make_mcp_client(tools=[tool])
+        mock_create_agent.return_value = _make_agent(
+            messages=[MagicMock(content="agent answer")]
+        )
 
         result = invoke(
             config=_make_config(),
@@ -199,21 +196,10 @@ class TestInvoke:
         mock_create_agent: MagicMock,
     ) -> None:
         mock_cls.return_value = MagicMock()
-        client = MagicMock()
-
-        async def _get_tools() -> list[object]:
-            return []
-
-        client.get_tools = _get_tools
-        mock_client_cls.return_value = _make_async_client_ctx(client)
-
-        agent = MagicMock()
-
-        async def _ainvoke(state: dict) -> dict:
-            return {"messages": [MagicMock(content="done")]}
-
-        agent.ainvoke = _ainvoke
-        mock_create_agent.return_value = agent
+        mock_client_cls.return_value = _make_mcp_client(tools=[])
+        mock_create_agent.return_value = _make_agent(
+            messages=[MagicMock(content="done")]
+        )
 
         invoke(
             config=_make_config(),
@@ -237,7 +223,7 @@ class TestInvoke:
             raise RuntimeError("npx not found")
 
         client.get_tools = _boom
-        mock_client_cls.return_value = _make_async_client_ctx(client)
+        mock_client_cls.return_value = client
 
         with pytest.raises(RuntimeError, match="npx not found"):
             invoke(
@@ -256,21 +242,8 @@ class TestInvoke:
         mock_create_agent: MagicMock,
     ) -> None:
         mock_cls.return_value = MagicMock()
-        client = MagicMock()
-
-        async def _get_tools() -> list[object]:
-            return []
-
-        client.get_tools = _get_tools
-        mock_client_cls.return_value = _make_async_client_ctx(client)
-
-        agent = MagicMock()
-
-        async def _ainvoke(state: dict) -> dict:
-            return {"messages": []}
-
-        agent.ainvoke = _ainvoke
-        mock_create_agent.return_value = agent
+        mock_client_cls.return_value = _make_mcp_client(tools=[])
+        mock_create_agent.return_value = _make_agent(messages=[])
 
         result = invoke(
             config=_make_config(),
@@ -292,13 +265,7 @@ class TestInvoke:
         mock_cls.return_value = MagicMock()
         tool_a = MagicMock(name="tool_a")
         tool_b = MagicMock(name="tool_b")
-        client = MagicMock()
-
-        async def _get_tools() -> list[object]:
-            return [tool_a, tool_b]
-
-        client.get_tools = _get_tools
-        mock_client_cls.return_value = _make_async_client_ctx(client)
+        mock_client_cls.return_value = _make_mcp_client(tools=[tool_a, tool_b])
         mock_create_agent.return_value = _make_agent(
             messages=[
                 MagicMock(content="tool_call_1"),
