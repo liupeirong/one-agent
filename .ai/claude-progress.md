@@ -14,6 +14,25 @@ interface session_log {
 ```json
 [
   {
+    "datetime": "2026-06-09 08-51",
+    "current_feature": "langchain-langgraph-agent-006",
+    "what_was_done": [
+      "Unified runtime.invoke on a single async agent path via asyncio.run; no-MCP runs use an empty tool list, MCP runs load tools from selected servers in the same event loop.",
+      "Added/updated test_runtime.py for no-MCP agent execution, MCP tool wiring, and multi-tool-call final-message behavior; 104 tests pass, ruff clean.",
+      "Split README into User Guide and Developer Guide; switched Windows code blocks to cmd.",
+      "Added CLAUDE.md rule: do not commit or push; leave changes for the user to review.",
+      "Marked feature 006 passing in .ai/feature-list.md with evidence."
+    ],
+    "decision": [
+      "Always run the agent through asyncio.run (CLI entrypoint is sync, so no nested-loop risk).",
+      "Do not add direct langgraph/langsmith deps: create_agent is re-exported via langchain; langsmith tracing belongs to feature 007."
+    ],
+    "issues": [
+      "Real-subprocess MCP integration tests still deferred (mocked)."
+    ],
+    "next_step": "Implement langsmith-tracing-007."
+  },
+  {
     "datetime": "2026-06-08 10-21",
     "current_feature": "claude-mcp-005",
     "what_was_done": [

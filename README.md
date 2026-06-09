@@ -5,28 +5,15 @@ runs. The planned v1 behavior is to load only the Claude-style skills and MCP
 servers explicitly mentioned in the prompt, use an OpenAI-compatible LLM API,
 and return one final non-streaming answer.
 
-## Getting Started
+## User Guide
 
-### Finish setting up the repo
+1. Install dependencies:
 
-- run `uv sync`
-- run `git init`
-- run `uv run pre-commit install`
-- run `uv run pre-commit install --hook-type commit-msg`
+```cmd
+uv sync
+```
 
-### Verify the repo is set correctly
-
-- copy `.env.sample` to `.env` and fill in your values
-- run `uv run python main.py "Hello, what can you do?"`
-- run `uv run pytest`
-
-## Planned v1 end-user usage
-
-This is the target behavior captured for implementation; it is not fully built
-yet.
-
-Configure your OpenAI-compatible model with environment variables or a `.env`
-file:
+2. Configure your OpenAI-compatible model with environment variables or a `.env` file:
 
 ```txt
 OPENAI_API_KEY=...
@@ -34,13 +21,13 @@ OPENAI_BASE_URL=...
 OPENAI_MODEL=...
 ```
 
-Put skills in Claude-style folders:
+3. Add optional skills in Claude-style folders:
 
 ```txt
 ~/.claude/skills/<skill-name>/SKILL.md
 ```
 
-Configure MCP servers in `~/.claude.json`:
+4. Add optional MCP servers in `~/.claude.json`:
 
 ```json
 {
@@ -56,16 +43,33 @@ Configure MCP servers in `~/.claude.json`:
 }
 ```
 
-Run one prompt at a time:
+5. Run one prompt at a time:
 
-```powershell
-one-agent "Use @writer /tavily to research current options and summarize them"
+```cmd
+uv run python main.py "Use @writer /tavily to research current options and summarize them"
 ```
 
 `@skill-name` loads `~/.claude/skills/<skill-name>/SKILL.md`. `/mcp-name`
 loads the matching MCP server from `~/.claude.json` and exposes that server's
 tools to the agent. Mentions can appear anywhere in the prompt. If no mentions
 are present, no skills or MCP tools are loaded.
+
+## Developer Guide
+
+### Finish setting up the repo
+
+```cmd
+uv sync
+git init
+uv run pre-commit install
+uv run pre-commit install --hook-type commit-msg
+```
+
+### Run tests
+
+```cmd
+uv run pytest
+```
 
 ### Build the feature list with AI
 

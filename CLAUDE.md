@@ -25,6 +25,7 @@ why it is blocked.
 - Do not rewrite the feature list to hide unfinished work.
 - Do not remove or weaken tests just to make the task look complete.
 - Use repository artifacts as the system of record.
+- Stage all changes, but do not commit or push changes.
 
 ## Completion Gate
 

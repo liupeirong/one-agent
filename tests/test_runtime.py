@@ -9,6 +9,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from one_agent.config import Config
+from one_agent.mcp_config import McpServer
 from one_agent.runtime import invoke
 
 
@@ -29,23 +30,69 @@ def _make_config(
     return Config(openai_api_key=api_key, openai_base_url=base_url, openai_model=model)
 
 
+def _make_agent(*, messages: list[object]) -> MagicMock:
+    agent = MagicMock()
+
+    async def _ainvoke(_state: dict) -> dict:
+        return {"messages": messages}
+
+    agent.ainvoke = _ainvoke
+    return agent
+
+
 class TestInvoke:
+    @patch("one_agent.runtime.create_agent")
     @patch("one_agent.runtime.ChatOpenAI")
-    def test_returns_model_response(self, mock_cls: MagicMock) -> None:
-        mock_llm = MagicMock()
-        mock_llm.invoke.return_value = MagicMock(content="The answer is 42.")
-        mock_cls.return_value = mock_llm
+    def test_returns_final_agent_message(
+        self, mock_cls: MagicMock, mock_create_agent: MagicMock
+    ) -> None:
+        mock_cls.return_value = MagicMock()
+        mock_create_agent.return_value = _make_agent(
+            messages=[MagicMock(content="The answer is 42.")]
+        )
 
         result = invoke(config=_make_config(), prompt="What is the answer?")
 
         assert result == "The answer is 42."
-        mock_llm.invoke.assert_called_once_with("What is the answer?")
+        args, kwargs = mock_create_agent.call_args
+        assert args[1] == []
+        assert kwargs["system_prompt"] is None
 
+    @patch("one_agent.runtime.create_agent")
     @patch("one_agent.runtime.ChatOpenAI")
-    def test_passes_api_key_when_present(self, mock_cls: MagicMock) -> None:
-        mock_cls.return_value = MagicMock(
-            invoke=MagicMock(return_value=MagicMock(content="ok"))
+    def test_no_mcp_servers_still_uses_agent_path(
+        self, mock_cls: MagicMock, mock_create_agent: MagicMock
+    ) -> None:
+        mock_cls.return_value = MagicMock()
+        mock_create_agent.return_value = _make_agent(
+            messages=[MagicMock(content="plain")]
         )
+
+        result = invoke(config=_make_config(), prompt="hi", mcp_servers=[])
+
+        assert result == "plain"
+        mock_create_agent.assert_called_once()
+
+    @patch("one_agent.runtime.create_agent")
+    @patch("one_agent.runtime.ChatOpenAI")
+    def test_no_mcp_servers_does_not_touch_mcp_client(
+        self, mock_cls: MagicMock, mock_create_agent: MagicMock
+    ) -> None:
+        mock_cls.return_value = MagicMock()
+        mock_create_agent.return_value = _make_agent(messages=[MagicMock(content="ok")])
+
+        with patch("one_agent.runtime.MultiServerMCPClient") as mock_client_cls:
+            invoke(config=_make_config(), prompt="hi")
+
+        mock_client_cls.assert_not_called()
+
+    @patch("one_agent.runtime.create_agent")
+    @patch("one_agent.runtime.ChatOpenAI")
+    def test_passes_api_key_when_present(
+        self, mock_cls: MagicMock, mock_create_agent: MagicMock
+    ) -> None:
+        mock_cls.return_value = MagicMock()
+        mock_create_agent.return_value = _make_agent(messages=[MagicMock(content="ok")])
 
         invoke(
             config=_make_config(api_key="sk-key"), prompt="hi"
@@ -54,11 +101,13 @@ class TestInvoke:
         _, kwargs = mock_cls.call_args
         assert kwargs["api_key"] == "sk-key"  # pragma: allowlist secret
 
+    @patch("one_agent.runtime.create_agent")
     @patch("one_agent.runtime.ChatOpenAI")
-    def test_passes_model_and_base_url(self, mock_cls: MagicMock) -> None:
-        mock_cls.return_value = MagicMock(
-            invoke=MagicMock(return_value=MagicMock(content="ok"))
-        )
+    def test_passes_model_and_base_url(
+        self, mock_cls: MagicMock, mock_create_agent: MagicMock
+    ) -> None:
+        mock_cls.return_value = MagicMock()
+        mock_create_agent.return_value = _make_agent(messages=[MagicMock(content="ok")])
 
         invoke(
             config=_make_config(model="gpt-4o-mini", base_url="https://custom.api/v1"),
@@ -69,13 +118,13 @@ class TestInvoke:
         assert kwargs["model"] == "gpt-4o-mini"
         assert kwargs["base_url"] == "https://custom.api/v1"
 
+    @patch("one_agent.runtime.create_agent")
     @patch("one_agent.runtime.ChatOpenAI")
-    def test_system_instructions_sent_as_system_message(
-        self, mock_cls: MagicMock
+    def test_system_instructions_are_passed_as_system_prompt(
+        self, mock_cls: MagicMock, mock_create_agent: MagicMock
     ) -> None:
-        mock_llm = MagicMock()
-        mock_llm.invoke.return_value = MagicMock(content="ok")
-        mock_cls.return_value = mock_llm
+        mock_cls.return_value = MagicMock()
+        mock_create_agent.return_value = _make_agent(messages=[MagicMock(content="ok")])
 
         invoke(
             config=_make_config(),
@@ -83,21 +132,21 @@ class TestInvoke:
             system_instructions="Follow the writer skill.",
         )
 
-        mock_llm.invoke.assert_called_once_with(
-            [("system", "Follow the writer skill."), ("human", "hi")]
-        )
+        _, kwargs = mock_create_agent.call_args
+        assert kwargs["system_prompt"] == "Follow the writer skill."
 
+    @patch("one_agent.runtime.create_agent")
     @patch("one_agent.runtime.ChatOpenAI")
-    def test_empty_system_instructions_falls_back_to_plain_prompt(
-        self, mock_cls: MagicMock
+    def test_empty_system_instructions_pass_none_system_prompt(
+        self, mock_cls: MagicMock, mock_create_agent: MagicMock
     ) -> None:
-        mock_llm = MagicMock()
-        mock_llm.invoke.return_value = MagicMock(content="ok")
-        mock_cls.return_value = mock_llm
+        mock_cls.return_value = MagicMock()
+        mock_create_agent.return_value = _make_agent(messages=[MagicMock(content="ok")])
 
         invoke(config=_make_config(), prompt="hi", system_instructions="")
 
-        mock_llm.invoke.assert_called_once_with("hi")
+        _, kwargs = mock_create_agent.call_args
+        assert kwargs["system_prompt"] is None
 
     @patch("one_agent.runtime.create_agent")
     @patch("one_agent.runtime.MultiServerMCPClient")
@@ -108,8 +157,6 @@ class TestInvoke:
         mock_client_cls: MagicMock,
         mock_create_agent: MagicMock,
     ) -> None:
-        from one_agent.mcp_config import McpServer
-
         mock_cls.return_value = MagicMock()
         tool = MagicMock(name="tool")
         client = MagicMock()
@@ -151,8 +198,6 @@ class TestInvoke:
         mock_client_cls: MagicMock,
         mock_create_agent: MagicMock,
     ) -> None:
-        from one_agent.mcp_config import McpServer
-
         mock_cls.return_value = MagicMock()
         client = MagicMock()
 
@@ -180,32 +225,11 @@ class TestInvoke:
         _, kwargs = mock_create_agent.call_args
         assert kwargs["system_prompt"] is None
 
-    @patch("one_agent.runtime.create_agent")
-    @patch("one_agent.runtime.MultiServerMCPClient")
-    @patch("one_agent.runtime.ChatOpenAI")
-    def test_no_mcp_servers_does_not_invoke_agent(
-        self,
-        mock_cls: MagicMock,
-        mock_client_cls: MagicMock,
-        mock_create_agent: MagicMock,
-    ) -> None:
-        mock_llm = MagicMock()
-        mock_llm.invoke.return_value = MagicMock(content="plain")
-        mock_cls.return_value = mock_llm
-
-        result = invoke(config=_make_config(), prompt="hi", mcp_servers=[])
-
-        assert result == "plain"
-        mock_create_agent.assert_not_called()
-        mock_client_cls.assert_not_called()
-
     @patch("one_agent.runtime.MultiServerMCPClient")
     @patch("one_agent.runtime.ChatOpenAI")
     def test_mcp_startup_failure_propagates_raw_error(
         self, mock_cls: MagicMock, mock_client_cls: MagicMock
     ) -> None:
-        from one_agent.mcp_config import McpServer
-
         mock_cls.return_value = MagicMock()
         client = MagicMock()
 
@@ -225,14 +249,12 @@ class TestInvoke:
     @patch("one_agent.runtime.create_agent")
     @patch("one_agent.runtime.MultiServerMCPClient")
     @patch("one_agent.runtime.ChatOpenAI")
-    def test_mcp_returns_empty_when_agent_yields_no_messages(
+    def test_returns_empty_when_agent_yields_no_messages(
         self,
         mock_cls: MagicMock,
         mock_client_cls: MagicMock,
         mock_create_agent: MagicMock,
     ) -> None:
-        from one_agent.mcp_config import McpServer
-
         mock_cls.return_value = MagicMock()
         client = MagicMock()
 
@@ -257,3 +279,40 @@ class TestInvoke:
         )
 
         assert result == ""
+
+    @patch("one_agent.runtime.create_agent")
+    @patch("one_agent.runtime.MultiServerMCPClient")
+    @patch("one_agent.runtime.ChatOpenAI")
+    def test_returns_last_message_after_multiple_internal_tool_calls(
+        self,
+        mock_cls: MagicMock,
+        mock_client_cls: MagicMock,
+        mock_create_agent: MagicMock,
+    ) -> None:
+        mock_cls.return_value = MagicMock()
+        tool_a = MagicMock(name="tool_a")
+        tool_b = MagicMock(name="tool_b")
+        client = MagicMock()
+
+        async def _get_tools() -> list[object]:
+            return [tool_a, tool_b]
+
+        client.get_tools = _get_tools
+        mock_client_cls.return_value = _make_async_client_ctx(client)
+        mock_create_agent.return_value = _make_agent(
+            messages=[
+                MagicMock(content="tool_call_1"),
+                MagicMock(content="tool_call_2"),
+                MagicMock(content="final answer"),
+            ]
+        )
+
+        result = invoke(
+            config=_make_config(),
+            prompt="research and summarize",
+            mcp_servers=[McpServer(name="tavily", command="npx")],
+        )
+
+        assert result == "final answer"
+        args, _kwargs = mock_create_agent.call_args
+        assert args[1] == [tool_a, tool_b]

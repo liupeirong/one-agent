@@ -151,20 +151,24 @@ interface feature_list {
     "notes": "The expected config shape is compatible with Claude-style `mcpServers`, for example command, args, and env per server. Implementations should follow the MCP client library lifecycle and avoid orphaned child processes. Real-subprocess integration tests deferred — current tests mock MultiServerMCPClient. Stderr from MCP child processes still goes to the user's terminal (langchain-mcp-adapters does not currently expose per-server errlog)."
   },
   {
-    "last_updated": "2026-06-07 13-09",
+    "last_updated": "2026-06-09 10-30",
     "id": "langchain-langgraph-agent-006",
     "priority": 2,
     "area": "agent runtime",
     "title": "LangChain and LangGraph agent runtime",
     "user_visible_behavior": "The console app answers prompts using a LangChain/LangGraph agent that can use explicitly loaded skills and MCP tools.",
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "The runtime builds the model, selected skill context, and selected MCP tools into a single agent run.",
       "The agent can perform multiple internal tool calls before returning one final answer.",
       "The runtime does not load unmentioned skills or MCP servers."
     ],
-    "evidence": [],
-    "notes": "Use LangChain, LangGraph, and LangSmith SDKs as the AI agent framework."
+    "evidence": [
+      "runtime.invoke always runs the LangChain agent on the async path via asyncio.run; MCP tools are loaded only when /mcp servers are explicitly selected.",
+      "test_runtime.py covers no-MCP agent run, MCP tool wiring, and multi-tool-call final-message behavior; full suite (104 tests) passes with ruff clean.",
+      "Framework deps satisfied via langchain (re-exports create_agent from langgraph) and langchain-mcp-adapters; no direct langgraph/langsmith imports needed."
+    ],
+    "notes": "Single-shot at the CLI boundary. LangSmith tracing is owned by feature 007."
   },
   {
     "last_updated": "2026-06-07 13-09",
