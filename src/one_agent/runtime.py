@@ -1,6 +1,7 @@
 """Agent invocation runtime for one-agent."""
 
 import asyncio
+import logging
 from typing import Sequence
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
@@ -12,6 +13,8 @@ from langchain_openai import ChatOpenAI
 from one_agent.config import Config
 from one_agent.mcp_config import McpServer
 from one_agent.mcp_servers import to_stdio_connection
+
+_logger = logging.getLogger(__name__)
 
 # Maximum time we will wait for selected MCP servers to start and list their
 # tools before failing the run. Keeps a misconfigured or hung server from
@@ -103,6 +106,10 @@ async def _ainvoke_agent(
 ) -> dict:
     """Create and execute a LangChain agent with provided tools and prompt."""
     agent = create_agent(llm, tools, system_prompt=system_instructions or None)
+    _logger.debug(
+        "Invoking agent with system_instructions present=%s",
+        bool(system_instructions),
+    )
     state = await asyncio.wait_for(
         agent.ainvoke({"messages": [("user", prompt)]}),
         timeout=_AGENT_EXECUTION_TIMEOUT_SECONDS,
