@@ -12,6 +12,7 @@ verification over speed.
 4. Review recent commits with `git log --oneline -5`.
 5. Install or sync dependencies with `uv sync`.
 6. Check if tests are already broken with `pytest`.
+7. Create a new branch `feat/feature-id` if you are on the main branch before implementing a new feature.
 
 Then select exactly the highest priority unfinished feature and
 work only on that feature until you either verify it or document
@@ -20,12 +21,10 @@ why it is blocked.
 ## Rules
 
 - One active feature at a time.
-- Create a new branch if you are on the main branch and starting to implement a new feature.
 - Do not claim completion without runnable evidence.
 - Do not rewrite the feature list to hide unfinished work.
 - Do not remove or weaken tests just to make the task look complete.
 - Use repository artifacts as the system of record.
-- Stage all changes, but do not commit or push changes.
 
 ## Completion Gate
 
@@ -42,3 +41,4 @@ and the result is recorded in the `evidence` field of `.ai/feature-list.md`.
     - any unresolved risk
 3. Update `README.md` if anything changed that affects end-user or developer experience.
 4. Check `.ai/clean-state-checklist.md` to leave the repo in a clean state for the next session.
+5. Stage all changes, but do not commit or push changes.
