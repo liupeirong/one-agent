@@ -1,9 +1,6 @@
 """Console entry point for one-agent."""
 
 import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
 from one_agent import (
     CliError,
@@ -27,7 +24,7 @@ from one_agent import (
 # Force UTF-8 on stdout/stderr so non-ASCII content from MCP tools (web
 # search results, emoji, accented characters, etc.) doesn't crash on
 # legacy Windows consoles whose default code page is cp1252/cp437.
-# `errors="replace"` keeps the run from failing on rare unencodable chars.
+# `errors="replace"` keeps the run from failing on rare un-encodable chars.
 for _stream in (sys.stdout, sys.stderr):
     reconfigure = getattr(_stream, "reconfigure", None)
     if reconfigure is not None:

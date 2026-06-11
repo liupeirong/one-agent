@@ -13,7 +13,8 @@ and return one final non-streaming answer.
 uv sync
 ```
 
-2. Configure your OpenAI-compatible model with environment variables or a `.env` file:
+1. Configure your OpenAI-compatible model with environment variables
+ or a `.env` file:
 
 ```txt
 OPENAI_API_KEY=...
@@ -26,13 +27,13 @@ Optional LangSmith tracing: set `LANGSMITH_API_KEY` (and optionally
 LangSmith. Leave it unset to keep tracing off; set
 `LANGSMITH_TRACING=false` to force it off even when a key is present.
 
-3. Add optional skills in Claude-style folders:
+1. Add optional skills in Claude-style folders:
 
 ```txt
 ~/.claude/skills/<skill-name>/SKILL.md
 ```
 
-4. Add optional MCP servers in `~/.claude.json`:
+1. Add optional MCP servers in `~/.claude.json`:
 
 ```json
 {
@@ -48,7 +49,7 @@ LangSmith. Leave it unset to keep tracing off; set
 }
 ```
 
-5. Run one prompt at a time:
+1. Run one prompt at a time:
 
 ```cmd
 uv run python main.py "Use @writer /tavily to research current options and summarize them"
@@ -68,6 +69,10 @@ uv sync
 git init
 uv run pre-commit install
 uv run pre-commit install --hook-type commit-msg
+# on Windows
+uv pip install -e . --no-build-isolation
+# on Linux
+uv pip install -e .
 ```
 
 ### Run tests

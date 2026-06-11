@@ -23,6 +23,7 @@
         "httpx",
         "langchain",
         "langgraph",
+        "langsmith",
         "monorepo",
         "oneline",
         "openai",
@@ -39,7 +40,11 @@
         "virtualenv",
         "vite",
         "vitejs",
-        "webui"
+        "webui",
+        "tavily",
+        "mcps",
+        "arun",
+        "ainvoke",
     ],
     "ignoreWords": [],
     "import": []
